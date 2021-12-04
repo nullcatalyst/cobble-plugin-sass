@@ -15,7 +15,10 @@ export class SassPlugin extends cobble.BasePlugin {
         watcher: cobble.BaseWatcher,
         settings: cobble.BuildSettings,
     ): Promise<cobble.ResetPluginWatchedFilesFn> {
-        const srcs = settings.srcs.filter(src => src.protocol == this.name());
+        const srcs = this.filterSrcs(settings);
+        if (srcs.length == 0) {
+            return () => {};
+        }
         const inputContents = srcs
             .map(src => `@import "./${settings.basePath.relative(src.path).replaceAll('\\', '/')}";\n`)
             .join('');
