@@ -1,12 +1,8 @@
 import * as assert from 'assert';
-import { BuildSettings } from 'cobble/lib/composer/settings';
-import { ResolvedPath } from 'cobble/lib/util/resolved_path';
-import { Event, EventType } from 'cobble/lib/watcher/event';
-import { FakeWatcher } from 'cobble/lib/watcher/fake';
+import * as cobble from 'cobble';
 import * as fs from 'fs';
 import * as tmp from 'tmp-promise';
 import { SassPlugin } from '../sass';
-
 
 describe('sass plugin', () => {
     const defer: (() => void)[] = [];
@@ -19,21 +15,22 @@ describe('sass plugin', () => {
         const { path: dirPath, cleanup: dirCleanup } = await tmp.dir({ unsafeCleanup: true });
         defer.push(dirCleanup);
 
-        const basePath = ResolvedPath.absolute(dirPath);
+        const basePath = cobble.ResolvedPath.absolute(dirPath);
         const filePath1 = basePath.join('1.scss');
         await fs.promises.writeFile(filePath1.toString(), 'h1 { color: red; }');
         const filePath2 = basePath.join('2.scss');
         await fs.promises.writeFile(filePath2.toString(), 'h2 { color: blue; }');
 
-        const watcher = new FakeWatcher();
-        const plugin = new SassPlugin({});
-        const settings = new BuildSettings('linux');
-        await settings.load(
+        const watcher = new cobble.FakeWatcher();
+        const plugin = new SassPlugin({ 'tmp': basePath.join('tmp'), 'verbose': 0 });
+        const settings = await cobble.BuildSettings.from(
             {
                 'name': 'test',
                 'srcs': [`${plugin.name()}:${filePath1.toString()}`, `${plugin.name()}:${filePath2.toString()}`],
             },
-            basePath.join('build.json'),
+            {
+                'basePath': basePath,
+            },
         );
 
         const cleanup = await plugin.process(watcher, settings);
@@ -46,21 +43,22 @@ describe('sass plugin', () => {
         const { path: dirPath, cleanup: dirCleanup } = await tmp.dir({ unsafeCleanup: true });
         defer.push(dirCleanup);
 
-        const basePath = ResolvedPath.absolute(dirPath);
+        const basePath = cobble.ResolvedPath.absolute(dirPath);
         const filePath1 = basePath.join('1.scss');
         await fs.promises.writeFile(filePath1.toString(), '@import "./2"; h1 { color: red; }');
         const filePath2 = basePath.join('2.scss');
         await fs.promises.writeFile(filePath2.toString(), 'h2 { color: blue; }');
 
-        const watcher = new FakeWatcher();
-        const plugin = new SassPlugin({});
-        const settings = new BuildSettings('linux');
-        await settings.load(
+        const watcher = new cobble.FakeWatcher();
+        const plugin = new SassPlugin({ 'tmp': basePath.join('tmp'), 'verbose': 0 });
+        const settings = await cobble.BuildSettings.from(
             {
                 'name': 'test',
                 'srcs': [`${plugin.name()}:${filePath1.toString()}`],
             },
-            basePath.join('build.json'),
+            {
+                'basePath': basePath,
+            },
         );
 
         const cleanup = await plugin.process(watcher, settings);
@@ -73,21 +71,22 @@ describe('sass plugin', () => {
         const { path: dirPath, cleanup: dirCleanup } = await tmp.dir({ unsafeCleanup: true });
         defer.push(dirCleanup);
 
-        const basePath = ResolvedPath.absolute(dirPath);
+        const basePath = cobble.ResolvedPath.absolute(dirPath);
         const filePath1 = basePath.join('1.scss');
         await fs.promises.writeFile(filePath1.toString(), '@import "./2"; h1 { color: red; }');
         const filePath2 = basePath.join('2.scss');
         await fs.promises.writeFile(filePath2.toString(), 'h2 { color: blue; }');
 
-        const watcher = new FakeWatcher();
-        const plugin = new SassPlugin({});
-        const settings = new BuildSettings('linux');
-        await settings.load(
+        const watcher = new cobble.FakeWatcher();
+        const plugin = new SassPlugin({ 'tmp': basePath.join('tmp'), 'verbose': 0 });
+        const settings = await cobble.BuildSettings.from(
             {
                 'name': 'test',
                 'srcs': [`${plugin.name()}:${filePath1.toString()}`],
             },
-            basePath.join('build.json'),
+            {
+                'basePath': basePath,
+            },
         );
 
         // First build
@@ -96,7 +95,7 @@ describe('sass plugin', () => {
 
         // Change file and rebuild
         await fs.promises.writeFile(filePath1.toString(), 'h1 { color: green; }');
-        await watcher.emit(new Event(EventType.ChangeFile, filePath1));
+        await watcher.emit(new cobble.Event(cobble.EventType.ChangeFile, filePath1));
         assert.strictEqual(watcher.callbacks.size, 1);
 
         // Cleanup

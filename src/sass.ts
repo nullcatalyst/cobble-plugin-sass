@@ -1,17 +1,8 @@
-import { BuildSettings } from 'cobble/lib/composer/settings';
-import { BasePlugin, ResetPluginWatchedFilesFn } from 'cobble/lib/plugins/base';
-import { createMailbox } from 'cobble/lib/util/mailbox';
-import { ResolvedPath } from 'cobble/lib/util/resolved_path';
-import { BaseWatcher } from 'cobble/lib/watcher/base';
-import { Event, EventType } from 'cobble/lib/watcher/event';
+import * as cobble from 'cobble';
 import * as fs from 'fs';
 import * as sass from 'node-sass';
 
-export class SassPlugin extends BasePlugin {
-    constructor(opts?: any) {
-        super(opts);
-    }
-
+export class SassPlugin extends cobble.BasePlugin {
     override name(): string {
         return 'sass';
     }
@@ -20,15 +11,17 @@ export class SassPlugin extends BasePlugin {
         return ['scss', 'sass'];
     }
 
-    override async process(watcher: BaseWatcher, settings: BuildSettings): Promise<ResetPluginWatchedFilesFn> {
+    override async process(
+        watcher: cobble.BaseWatcher,
+        settings: cobble.BuildSettings,
+    ): Promise<cobble.ResetPluginWatchedFilesFn> {
         const srcs = settings.srcs.filter(src => src.protocol == this.name());
         const inputContents = srcs
             .map(src => `@import "./${settings.basePath.relative(src.path).replaceAll('\\', '/')}";\n`)
             .join('');
-        const inputName = '__virtual__';
 
         const watchedFiles: { [filePath: string]: () => void } = {};
-        const build = createMailbox(async () => {
+        const build = cobble.createMailbox(async () => {
             // Make a copy of the previous watched files
             // This will be used to determine whether new files are being watched, as well as to stop watching unused files
             const prevWatchFiles = Object.assign({}, watchedFiles);
@@ -42,7 +35,7 @@ export class SassPlugin extends BasePlugin {
                         outputStyle: /*release*/ false ? 'compressed' : 'expanded',
                         importer: (fileName: string, prev: string) => {
                             const prevPath =
-                                prev === 'stdin' ? settings.basePath : ResolvedPath.absolute(prev).dirname();
+                                prev === 'stdin' ? settings.basePath : cobble.ResolvedPath.absolute(prev).dirname();
                             const filePath = prevPath.join(fileName);
                             if (filePath.toString() in watchedFiles) {
                                 // This file is already being watched and is still being used, don't remove it from the list
@@ -71,11 +64,11 @@ export class SassPlugin extends BasePlugin {
                 );
             });
 
-            await fs.promises.writeFile(settings.outputPath.toString(), result.css);
+            await fs.promises.writeFile(settings.outDir.join(`${settings.name}.css`).toString(), result.css);
         });
 
         // Trigger the first build in order to find the files to watch (the actual event doesn't matter)
-        await build(new Event(EventType.AddFile, settings.outputPath));
+        await build(new cobble.Event(cobble.EventType.AddFile, settings.outDir));
 
         return async () => {
             for (const [filePath, cleanup] of Object.entries(watchedFiles)) {
