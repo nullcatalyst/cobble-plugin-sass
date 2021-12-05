@@ -1,12 +1,12 @@
 {
     "compilerOptions": {
         "module": "commonjs",
-        "moduleResolution": "node",
         "target": "ES2021",
         "rootDir": "src",
         "outDir": "lib",
         "sourceMap": true,
-        "esModuleInterop": true
+        "declaration": true
     },
+    "include": ["src/**/*.ts"],
     "exclude": ["node_modules", "**/*.test.ts"]
 }
